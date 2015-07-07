@@ -368,16 +368,29 @@ class NiceFFI::Struct < FFI::Struct
 
 
   def init_from_hash( val )   # :nodoc:
-    members.each do |member|
-      self[ member ] = val[ member ]
+    clear
+    val.each do |sym, value|
+      raise NoMethodError unless self.members.member?( sym )
+      if self[ sym ].is_a?( FFI::Struct )
+        self[ sym ] = self[ sym ].class.new( value )
+      else
+        self[ sym ] = value
+      end
     end
   end
   private :init_from_hash
 
 
   def init_from_array( val )  # :nodoc:
+    unless val.length == members.length
+      raise IndexError, "expected #{members.length} items, got #{val.length}"
+    end
     members.each_with_index do |member, i|
-      self[ member ] = val[ i ]
+      if self[ member ].is_a?( FFI::Struct )
+        self[ member ] = self[ member ].class.new( val[ i ] )
+      else
+        self[ member ] = val[ i ]
+      end
     end
   end
   private :init_from_array
@@ -402,7 +415,13 @@ class NiceFFI::Struct < FFI::Struct
   #   # => [1,2,3,4]
   # 
   def to_ary
-    members.collect{ |m| self[m] }
+    members.collect do |m|
+        if self[ m ].is_a?( FFI::Struct )
+            self[ m ].to_ary
+        else
+            self[ m ]
+        end
+    end
   end
 
 
@@ -422,8 +441,15 @@ class NiceFFI::Struct < FFI::Struct
   #   # => {:h=>4, :w=>3, :x=>1, :y=>2}
   # 
   def to_hash
-    return {} if members.empty?
-    Hash[ *(members.collect{ |m| [m, self[m]] }.flatten!) ]
+    m_list = {}
+    members.collect do |m|
+        if self[ m ].is_a?( FFI::Struct )
+            m_list[ m ] = self[ m ].to_hash
+        else
+            m_list[ m ] = self[ m ]
+        end
+    end
+    return m_list
   end
 
 
