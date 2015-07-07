@@ -14,6 +14,13 @@ end
 
 describe NiceFFI::Struct do
 
+  it "generates accessors for nested structures" do
+    x = Outer.new ""
+    expect( x ).to respond_to :nested
+    expect( x.nested ).to be_a( Inner )
+    expect( x.nested ).to respond_to :one
+  end
+
   describe "to_hash" do
     before :all do
       @x = Inner.new [ 3, 2, 1 ]
